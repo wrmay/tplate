@@ -11,7 +11,7 @@ TPLATE_SUFFIX = '.tplate'
 
 # files in this list are allowed in the output directory.
 ALLOW_IN_OUTDIR_LIST = ['.DS_Store']
-NOCOPY_LIST = ['tplate_finalize.py','tplate.yaml','tplate.json']
+NOCOPY_LIST = ['tplate_finalize.py', 'tplate.yaml', 'tplate.json', '.git']
 
 
 def run():
@@ -64,16 +64,20 @@ def run():
 
     copydir(args.template_dir, args.output_dir, environment)
 
-    finalize_script = os.path.join(args.template_dir,'tplate_finalize.py')
+    finalize_script = os.path.join(args.template_dir, 'tplate_finalize.py')
     if os.path.isfile(finalize_script):
         spec = importlib.util.spec_from_file_location('tplate.finalize', location=finalize_script)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         module.run(environment)
 
+
 def copydir(fromdir, todir, environment):
     template_env = jinja2.Environment(loader=jinja2.FileSystemLoader(fromdir), trim_blocks=True, lstrip_blocks=True)
     for f in os.listdir(fromdir):
+        if f in NOCOPY_LIST:
+            continue
+
         infile = os.path.join(fromdir, f)
         if os.path.isdir(infile):
             to = os.path.join(todir, f)
@@ -87,6 +91,5 @@ def copydir(fromdir, todir, environment):
                     template.stream(environment).dump(fp)
 
             else:
-                if f not in NOCOPY_LIST:
-                    outfile = os.path.join(todir, f)
-                    shutil.copyfile(infile, outfile)
+                outfile = os.path.join(todir, f)
+                shutil.copyfile(infile, outfile)
