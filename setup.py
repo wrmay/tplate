@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='tplate',
-    version='1.0.1',
+    version='1.0.2',
     author='Randy May',
     description='A project templating tool that based on Jina2',
     long_description=long_description,
@@ -16,5 +16,5 @@ setuptools.setup(
         'console_scripts' : ['tplate=tplate.commandline:run']
     },
     license='MIT',
-    install_requires=['PyYaml>=5.1','Jinja2>=2.10.1']
+    install_requires=['PyYaml>=3.13','Jinja2>=2.10.1']
 )
