@@ -30,11 +30,14 @@ def run():
     that are referenced in the template. This purpose of this file is to document the variables that are in the
     templates and to provide default valued.  It should be copied into the output directory and modified.
 
-    The output directory must exist and contain a tplate.json file (or tplate.yaml) and nothing else.
+    The output directory must exist and contain a tplate.json file (or tplate.yaml).  In order to avoid accidentally
+    overwriting existing files, tplate will not do anything if there are other files in the output directory.  This
+    can be overridden by passing the --update flag
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('template_dir')
     parser.add_argument('output_dir')
+    parser.add_argument('--update', action='store_true')
 
     args = parser.parse_args(sys.argv[1:])
     if not os.path.isdir(args.template_dir):
@@ -47,16 +50,20 @@ def run():
 
     files = os.listdir(args.output_dir)
     files = [f for f in files if f not in ALLOW_IN_OUTDIR_LIST]
-    if len(files) != 1 or (files[0] != 'tplate.json' and files[0] != 'tplate.yaml'):
-        sys.exit('The output directory ({0}) must contain "tplate.json" or "tplate.yaml" and no other files or '
-                 'directories.'.format(args.output_dir))
+    if not args.update:
+        if len(files) != 1 or (files[0] != 'tplate.json' and files[0] != 'tplate.yaml'):
+            sys.exit('The output directory ({0}) must contain "tplate.json" or "tplate.yaml" and no other files or '
+                     'directories.'.format(args.output_dir))
 
-    if files[0] == 'tplate.json':
+    configfile = None
+    if 'tplate.json' in files:
         with open(os.path.join(args.output_dir, 'tplate.json'), 'r') as envfile:
             environment = json.load(envfile)
-    else:
+    elif 'tplate.yaml' in files:
         with open(os.path.join(args.output_dir, 'tplate.yaml'), 'r') as envfile:
             environment = yaml.safe_load(envfile)
+    else:
+        sys.exit('The output directory must contain a file named "tplate.json" or "tplate.yaml"')
 
     # add the output path and template path to the environment
     environment['output_dir'] = args.output_dir

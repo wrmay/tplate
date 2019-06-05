@@ -14,7 +14,9 @@ The template directory must contain a file named tplate.json or tplate.yaml, whi
 that are referenced in the template. The  purpose of this file is to document the variables that are in the
 templates and to provide default values. This file must be copied into the output directory and modified as desired.
 
-The output directory must exist and contain a tplate.json file (or tplate.yaml) and nothing else.  
+The output directory must exist and contain a tplate.json file (or tplate.yaml).  In order to avoid accidentally
+overwriting existing files, tplate will not do anything if there are other files in the output directory.  This can 
+be overridden by passing the --update flag
 
 There are some cases when it is desirable for the output directory structure to be determined by a variable.  Most 
 notably, java package names.  Currently the way to deal with this is with a post processing script.  The script 
@@ -58,4 +60,10 @@ def remove_empty_dirs(adir):
 # Setup
 
 `pip install tplate`
+
+# Release Notes
+
+## v1.0.3
+
+- added the "--update" flag to allow overwriting files in the output directory
 
