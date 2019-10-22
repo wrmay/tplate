@@ -3,7 +3,9 @@ import jinja2
 import json
 import os.path
 import shutil
+import subprocess
 import sys
+import tempfile
 import yaml
 
 TPLATE_SUFFIX = '.j2'
@@ -32,73 +34,91 @@ def run():
     parser.add_argument('--update', action='store_true')
 
     args = parser.parse_args(sys.argv[1:])
-    if not os.path.isdir(args.template_dir):
-        sys.exit('The program has exited because the provided template directory ({0}) does not exist.'
-                 .format(args.template_dir))
 
-    if os.path.isfile(args.output_dir):
-        sys.exit('The program has exited because the specified output directory is a file.')
+    tempdir = None  # this will be set to a TemporaryDirectory object if the template_dir is actually a URL
+    template_dir = args.template_dir
+    if template_dir.startswith('http:') or template_dir.startswith('https:') or template_dir.startswith('git@'):
+        tempdir = tempfile.TemporaryDirectory()
+        subprocess.run(['git', 'clone', template_dir, tempdir.name], check=True)
+        template_dir = tempdir.name
 
-    if os.path.isdir(args.output_dir):
-        files = os.listdir(args.output_dir)
-        files = [f for f in files if f not in ALLOW_IN_OUTDIR_LIST]
-        if (not args.update) and (len(files) > 0):
-            sys.exit('The program is exiting because the output directory ({0}) is not empty.'.format(args.output_dir))
+    try:
+        if not os.path.isdir(template_dir):
+            sys.exit('The program has exited because the provided template directory ({0}) does not exist.'
+                     .format(template_dir))
 
-    else:
-        os.makedirs(args.output_dir)
+        if os.path.isfile(args.output_dir):
+            sys.exit('The program has exited because the specified output directory is a file.')
 
-    context_file = os.path.join(args.template_dir, 'tplate.json')
-    if os.path.exists(context_file):
-        environment = loadfile(context_file)
+        if os.path.isdir(args.output_dir):
+            files = os.listdir(args.output_dir)
+            files = [f for f in files if f not in ALLOW_IN_OUTDIR_LIST]
+            if (not args.update) and (len(files) > 0):
+                sys.exit(
+                    'The program is exiting because the output directory ({0}) is not empty.'.format(args.output_dir))
 
-    else:
-        context_file = os.path.join(args.template_dir, 'tplate.yaml')
+        else:
+            os.makedirs(args.output_dir)
+
+        context_file = os.path.join(template_dir, 'tplate.json')
         if os.path.exists(context_file):
             environment = loadfile(context_file)
 
         else:
-            sys.exit('The program is exiting because a required file (tplate.json or tplate.yaml) was not found in '
-                     'the output directory ({0}).'.format(args.output_dir))
+            context_file = os.path.join(template_dir, 'tplate.yaml')
+            if os.path.exists(context_file):
+                environment = loadfile(context_file)
 
-    # if a context file was provided, load it on top of the defaults
-    if args.context is not None:
-        if not os.path.isfile(args.context):
-            sys.exit('The program is exiting because the specified context file ({0}) does not exist.'
-                     .format(args.context))
+            else:
+                sys.exit('The program is exiting because a required file (tplate.json or tplate.yaml) was not found in '
+                         'the output directory ({0}).'.format(args.output_dir))
 
-        if (not args.context.endswith('.json')) \
-                and (not args.context.endswith('.yaml')) \
-                and (not args.context.endswith('.yml')):
-            sys.exit('The program is exiting because the context argument ({0}) has an unsupported extension. Context '
-                     'files must end with ".json" or ".yaml" or "yml.'.format(args.context))
+        # if a context file was provided, load it on top of the defaults
+        if args.context is not None:
+            if not os.path.isfile(args.context):
+                sys.exit('The program is exiting because the specified context file ({0}) does not exist.'
+                         .format(args.context))
 
-        uservals = loadfile(args.context)
+            if (not args.context.endswith('.json')) \
+                    and (not args.context.endswith('.yaml')) \
+                    and (not args.context.endswith('.yml')):
+                sys.exit(
+                    'The program is exiting because the context argument ({0}) has an unsupported extension. Context '
+                    'files must end with ".json" or ".yaml" or "yml.'.format(args.context))
 
-    # otherwise prompt for input
-    else:
-        uservals = promptforinput(environment)
+            uservals = loadfile(args.context)
 
-    environment.update(uservals)
+        # otherwise prompt for input
+        else:
+            uservals = promptforinput(environment)
 
-    # add the output path and template path to the environment
-    environment['output_dir'] = args.output_dir
-    environment['template_dir'] = args.template_dir
+        environment.update(uservals)
 
-    copydir(args.template_dir, args.output_dir, environment)
+        # add the name of the output directory to the environment so it can be used in a template
+        if args.output_dir.endswith('/'):
+            environment['output_dir'] = os.path.basename(args.output_dir[0:-1])
+        else:
+            environment['output_dir'] = os.path.basename(args.output_dir)
 
-    directives = None
-    path = os.path.join(args.output_dir, 'tplate_directives.json')
-    if os.path.exists(path):
-        directives = loadfile(path)
-    else:
-        path = os.path.join(args.output_dir, 'tplate_directives.yaml')
+
+        copydir(template_dir, args.output_dir, environment)
+
+        directives = None
+        path = os.path.join(args.output_dir, 'tplate_directives.json')
         if os.path.exists(path):
             directives = loadfile(path)
+        else:
+            path = os.path.join(args.output_dir, 'tplate_directives.yaml')
+            if os.path.exists(path):
+                directives = loadfile(path)
 
-    if directives is not None:
-        do_directives(args, directives)
-        os.remove(path)
+        if directives is not None:
+            do_directives(args, directives)
+            os.remove(path)
+
+    finally:
+        if tempdir is not None:
+            tempdir.cleanup()
 
 
 def do_directives(args, directives):
@@ -106,8 +126,8 @@ def do_directives(args, directives):
         if directive[0] == 'java_package_rename':
             frompath = os.path.join(args.output_dir, 'src', 'main', 'java', *(directive[1].split('.')))
             topath = os.path.join(args.output_dir, 'src', 'main', 'java', *(directive[2].split('.')))
-            shutil.rmtree(topath,ignore_errors=True)
-            os.renames(frompath,topath)
+            shutil.rmtree(topath, ignore_errors=True)
+            os.renames(frompath, topath)
             # print('>>> java_package_rename {0} {1}'.format(frompath, topath))
             # shutil.rmtree(topath, ignore_errors=True)
             # os.makedirs(topath,exist_ok=True)
@@ -122,7 +142,7 @@ def do_directives(args, directives):
 def remove_empty_dirs(adir):
     file_list = os.listdir(adir)
     for f in file_list:
-        subdir = os.path.join(adir,f)
+        subdir = os.path.join(adir, f)
         if os.path.isdir(subdir):
             remove_empty_dirs(subdir)
 
