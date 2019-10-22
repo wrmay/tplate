@@ -100,7 +100,6 @@ def run():
         else:
             environment['output_dir'] = os.path.basename(args.output_dir)
 
-
         copydir(template_dir, args.output_dir, environment)
 
         directives = None
@@ -124,32 +123,24 @@ def run():
 def do_directives(args, directives):
     for directive in directives:
         if directive[0] == 'java_package_rename':
-            frompath = os.path.join(args.output_dir, 'src', 'main', 'java', *(directive[1].split('.')))
-            topath = os.path.join(args.output_dir, 'src', 'main', 'java', *(directive[2].split('.')))
-            shutil.rmtree(topath, ignore_errors=True)
-            os.renames(frompath, topath)
-            # print('>>> java_package_rename {0} {1}'.format(frompath, topath))
-            # shutil.rmtree(topath, ignore_errors=True)
-            # os.makedirs(topath,exist_ok=True)
-            # simplecopy(frompath,topath)
-            # shutil.rmtree(frompath)
-            # remove_empty_dirs(os.path.join(args.output_dir, 'src', 'main', 'java'))
+            java_package_rename(args.output_dir, directive[1], directive[2])
         else:
             # just ignore unknown directives
             pass
 
 
-def remove_empty_dirs(adir):
-    file_list = os.listdir(adir)
-    for f in file_list:
-        subdir = os.path.join(adir, f)
-        if os.path.isdir(subdir):
-            remove_empty_dirs(subdir)
-
-    # after removing empty directories
-    file_list = os.listdir(adir)
-    if len(file_list) == 0:
-        os.rmdir(adir)
+def java_package_rename(basedir, frompackage, topackage):
+    frompath = os.path.join(basedir, 'java', *(frompackage.split('.')))
+    topath = os.path.join(basedir, 'java', *(topackage.split('.')))
+    if os.path.isdir(frompath):
+        shutil.rmtree(topath, ignore_errors=True)
+        os.renames(frompath, topath)
+        print('renamed {0} to {1}'.format(frompath,topath))
+    else:
+        for f in os.listdir(basedir):
+            path = os.path.join(basedir, f)
+            if os.path.isdir(path):
+                java_package_rename(path, frompackage, topackage)
 
 
 def promptforinput(userenv):
@@ -170,19 +161,6 @@ def promptforinput(userenv):
             done = False
 
     return userinput
-
-
-# simple copy without templating
-def simplecopy(fromdir, todir):
-    for f in os.listdir(fromdir):
-        infile = os.path.join(fromdir, f)
-        if os.path.isdir(infile):
-            to = os.path.join(todir, f)
-            os.makedirs(to, exist_ok=True)
-            simplecopy(infile, to)
-        else:
-            outfile = os.path.join(todir, f)
-            shutil.copyfile(infile, outfile)
 
 
 # copy with templating
