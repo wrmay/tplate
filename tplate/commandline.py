@@ -135,7 +135,7 @@ def java_package_rename(basedir, frompackage, topackage):
     if os.path.isdir(frompath):
         shutil.rmtree(topath, ignore_errors=True)
         os.renames(frompath, topath)
-        print('renamed {0} to {1}'.format(frompath,topath))
+        # print('renamed {0} to {1}'.format(frompath,topath))
     else:
         for f in os.listdir(basedir):
             path = os.path.join(basedir, f)
