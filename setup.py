@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='tplate',
-    version='1.1.0',
+    version='1.2.0',
     author='Randy May',
     description='A project templating tool that based on Jina2',
     long_description=long_description,

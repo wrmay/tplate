@@ -8,7 +8,14 @@ project template directory itself, and the desired output directory. An example 
 ```sh
 tplate  template/dir  output/dir --context=context.json
 ```
-If a "--context" file is not provided, the user will be asked to provide values.
+
+OR
+
+```sh
+tplate  github-url  output/dir --context=context.json
+```
+
+If a "--context" file is not provided, the user will be prompted to provide values.
 
 # Installation
 
@@ -62,6 +69,11 @@ and on the path.
   following names: ".git", "tplate.json", "tplate.yaml", ".DS_Store"
 
 # Release Notes
+
+## v1.2
+
+- The template can now be pulled from github by specifying a github project URL instead of an input directory.
+- Now supports renaming more than one java packages (e.g. src/main/java and src/test/java).
 
 ## v1.1
 
