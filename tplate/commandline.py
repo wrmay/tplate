@@ -11,7 +11,7 @@ import yaml
 TPLATE_SUFFIX = '.j2'
 
 # files in this list are allowed in the output directory.
-ALLOW_IN_OUTDIR_LIST = ['.DS_Store']
+ALLOW_IN_OUTDIR_LIST = ['.DS_Store', 'tplate.yaml', 'tplate.json']
 NOCOPY_LIST = ['tplate.yaml', 'tplate.json', '.git', '.DS_Store']
 
 
@@ -60,12 +60,12 @@ def run():
         else:
             os.makedirs(args.output_dir)
 
-        context_file = os.path.join(template_dir, 'tplate.json')
+        context_file = os.path.join(args.output_dir, 'tplate.json')
         if os.path.exists(context_file):
             environment = loadfile(context_file)
 
         else:
-            context_file = os.path.join(template_dir, 'tplate.yaml')
+            context_file = os.path.join(args.output_dir, 'tplate.yaml')
             if os.path.exists(context_file):
                 environment = loadfile(context_file)
 
@@ -89,10 +89,10 @@ def run():
             uservals = loadfile(args.context)
 
         # otherwise prompt for input
-        else:
-            uservals = promptforinput(environment)
+        # else:
+        #     uservals = promptforinput(environment)
 
-        environment.update(uservals)
+        # environment.update(uservals)
 
         # add the name of the output directory to the environment so it can be used in a template
         if args.output_dir.endswith('/'):
